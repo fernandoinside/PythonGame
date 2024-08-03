@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background-color: #5b5555;
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .map-container svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .target-point {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+            color: #00ff00;
+        }
+
+        .target-point img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .target-point span {
+            color: #00ff00;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .target-point:hover {
+            cursor: pointer;
+        }
+
+        .loading {
+            color: #00ff00;
+            font-size: 18px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Dashboard</h2>
+        <form id="scan-form" method="post" action="{{ url_for('add_target') }}">
+            <label for="target">Target:</label>
+            <input type="text" id="target" name="target" required>
+            <label for="action">Action:</label>
+            <select id="action" name="action">
+                <option value="ping">Ping</option>
+                <option value="whois">Whois</option>
+                <option value="tracert">Tracert</option>
+                <option value="network_scan">Network Scan</option>
+                <option value="detailed_scan">Detailed Scan</option>
+            </select>
+            <button type="submit">Add Target</button>
+        </form>
+        <div id="loading" class="loading hidden">Scanning...</div>
+        <h3>Targets</h3>
+        <table id="targets-table">
+            <tr>
+                <th>Target</th>
+                <th>Action</th>
+                <th>Result</th>
+                <th>Map</th>
+            </tr>
+            {% for target in targets %}
+            <tr class="target-row" data-target-id="{{ target._id }}">
+                <td>{{ target.target }}</td>
+                <td>{{ target.action }}</td>
+                <td>
+                    {% if target.result %}
+                        {% if target.action == 'detailed_scan' or target.action == 'network_scan' %}
+                            <pre class="result-data hidden">{{ target.result | tojson }}</pre>
+                            {% for result in target.result %}
+                                <div>
+                                    <strong>IP:</strong> {{ result.ip }}<br>
+                                    <strong>OS:</strong> {{ result.os }}<br>
+                                    {% if result.ports %}
+                                        <strong>Ports:</strong>
+                                        <ul>
+                                            {% for port in result.ports %}
+                                                <li>{{ port.port }} {{ port.state }} {{ port.service }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </div>
+                                <hr>
+                            {% endfor %}
+                            <button class="view-map-btn">View on Map</button>
+                        {% else %}
+                            <pre>{{ target.result }}</pre>
+                        {% endif %}
+                    {% else %}
+                        <span>No result available</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="{{ url_for('logout') }}">Logout</a>
+
+        <h3>Network Scan Results</h3>
+        <div class="map-container hidden" id="map-container">
+            <svg id="map-svg"></svg>
+        </div>
+        <div class="loading hidden" id="map-loading">Loading scan results...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const scanForm = document.getElementById('scan-form');
+            const loading = document.getElementById('loading');
+            const mapContainer = document.getElementById('map-container');
+            const mapLoading = document.getElementById('map-loading');
+
+            scanForm.addEventListener('submit', () => {
+                loading.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.view-map-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const targetRow = event.target.closest('.target-row');
+                    const resultDataElement = targetRow.querySelector('.result-data');
+                    if (resultDataElement) {
+                        const resultData = JSON.parse(resultDataElement.textContent);
+                        renderScanResult(resultData);
+                    }
+                });
+            });
+
+            function renderScanResult(networkScanResults) {
+                mapContainer.classList.remove('hidden');
+                mapLoading.classList.remove('hidden');
+                const mapSvg = document.getElementById('map-svg');
+                mapSvg.innerHTML = ''; // Clear previous results
+                const padding = 50;
+
+                const osIcons = {
+                    'Router': '{{ url_for("static", filename="router-icon.png") }}',
+                    'Windows': '{{ url_for("static", filename="windows-icon.png") }}',
+                    'Android': '{{ url_for("static", filename="android-icon.png") }}',
+                    'Apple': '{{ url_for("static", filename="apple-icon.png") }}',
+                    'Unknown': '{{ url_for("static", filename="router-icon.png") }}'
+                };
+
+                const positions = calculatePositions(networkScanResults.length, mapContainer.offsetWidth, mapContainer.offsetHeight, padding);
+
+                networkScanResults.forEach((device, index) => {
+                    const { x, y } = positions[index];
+
+                    const point = document.createElement('div');
+                    point.className = 'target-point';
+                    point.style.left = `${x}px`;
+                    point.style.top = `${y}px`;
+                    point.title = device.ip;
+                    point.innerHTML = `
+                        <img src="${osIcons[device.os] || osIcons['Unknown']}" alt="${device.os}">
+                        <span>${device.ip}</span>
+                        <span>MAC: ${device.mac || 'Unknown'}</span>
+                        ${device.ports ? device.ports.map(port => `<span>${port.port} ${port.state} ${port.service}</span>`).join('') : ''}
+                    `;
+
+                    mapContainer.appendChild(point);
+
+                    if (index > 0) {
+                        const previousDevice = networkScanResults[index - 1];
+                        const prevPoint = mapContainer.querySelector(`[title="${previousDevice.ip}"]`);
+                        if (prevPoint) {
+                            drawLine(prevPoint, point);
+                        }
+                    }
+                });
+
+                mapLoading.classList.add('hidden');
+            }
+
+            function calculatePositions(count, width, height, padding) {
+                const positions = [];
+                const angleStep = (2 * Math.PI) / count;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = Math.min(width, height) / 2 - padding;
+
+                for (let i = 0; i < count; i++) {
+                    const angle = i * angleStep;
+                    const x = centerX + radius * Math.cos(angle) - 20; // 20 is half the icon width
+                    const y = centerY + radius * Math.sin(angle) - 20; // 20 is half the icon height
+                    positions.push({ x, y });
+                }
+
+                return positions;
+            }
+
+            function drawLine(startElement, endElement) {
+                const startX = parseFloat(startElement.style.left) + 20;
+                const startY = parseFloat(startElement.style.top) + 20;
+                const endX = parseFloat(endElement.style.left) + 20;
+                const endY = parseFloat(endElement.style.top) + 20;
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", startX);
+                line.setAttribute("y1", startY);
+                line.setAttribute("x2", endX);
+                line.setAttribute("y2", endY);
+                line.setAttribute("stroke", "#00ff00");
+                line.setAttribute("stroke-width", "2");
+
+                document.getElementById('map-svg').appendChild(line);
+            }
+        });
+    </script>
+</body>
+</html>

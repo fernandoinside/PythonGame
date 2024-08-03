@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Scan Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Network Scan Results</h2>
+        <table>
+            <tr>
+                <th>IP Address</th>
+                <th>Operating System</th>
+            </tr>
+            {% for device in devices %}
+            <tr>
+                <td>{{ device.ip }}</td>
+                <td>{{ device.os }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="{{ url_for('home') }}">Back to Dashboard</a>
+    </div>
+</body>
+</html>
