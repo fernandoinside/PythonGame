@@ -1,3 +1,28 @@
+# Docker Security Tools Setup - Machado
+
+Este documento descreve como usar as várias ferramentas de segurança configuradas no Docker.
+
+## Ferramentas Incluídas
+- Metasploit
+- Rapid7 InsightVM/Nexpose
+- Wifite
+- Nmap
+- NGinx
+- Apache
+
+## Acessando as Ferramentas
+- Para acessar o Metasploit, execute: `msfconsole`
+- Para acessar o Rapid7 InsightVM/Nexpose, acesse: [http://localhost:3780](http://localhost:3780)
+- Para acessar o Wifite, execute: `wifite`
+- Para acessar o Nmap, execute: `nmap`
+- Para acessar o NGinx, acesse: [http://localhost:8080](http://localhost:8080)
+- Para acessar o Apache, acesse: [http://localhost:8081](http://localhost:8081)
+
+## Adicionando ao PATH
+O diretório dos scripts foi adicionado ao PATH do sistema, então você pode executar os comandos de qualquer lugar.
+
+## O JOGO
+
 # Network Topology Dashboard
 
 Este aplicativo é um dashboard de topologia de rede que permite escanear e visualizar dispositivos na rede local, exibindo informações detalhadas sobre cada dispositivo encontrado. A interface utiliza D3.js para criar um gráfico de topologia de rede semelhante ao Zenmap.

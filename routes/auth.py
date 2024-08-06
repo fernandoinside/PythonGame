@@ -6,7 +6,7 @@ auth_bp = Blueprint('auth', __name__)
 
 # Dummy user data
 users = {
-    "admin": "password"
+    "fernando": "123456"
 }
 
 def login_required(f):

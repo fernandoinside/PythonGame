@@ -6,17 +6,19 @@ import subprocess
 import re
 import json
 import threading
+import socket
+import random
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 
 # Configuração do MongoDB
-app.config["MONGO_URI"] = "mongodb://localhost:27017/flaskwebapp"
+app.config["MONGO_URI"] = "mongodb://mongodb:27017/mydatabase"
 mongo = PyMongo(app)
 
 # Dummy user data
 users = {
-    "admin": "password"
+    "fernando": "123456"
 }
 
 def login_required(f):
@@ -133,5 +135,21 @@ def parse_detailed_nmap_output(output):
         devices.append(current_device)
     return devices
 
+def find_free_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = 5000
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex(('0.0.0.0', port))
+    if result == 0:
+        port = find_free_port()
+        print(f"Porta 5000 está em uso, usando a porta {port} em vez disso.")
+    else:
+        print(f"Usando a porta {port}")
+    app.run(host='0.0.0.0', port=port)

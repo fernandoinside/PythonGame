@@ -3,7 +3,7 @@ from flask_pymongo import PyMongo
 
 class Config:
     SECRET_KEY = 'supersecretkey'
-    MONGO_URI = "mongodb://localhost:27017/flaskwebapp"
+    MONGO_URI = "mongodb://mongodb:27017/mydatabase"
 
 app = Flask(__name__)
 app.config.from_object(Config)
